@@ -38,17 +38,20 @@ $app->get('/api/play/{avkey:[0-9a-z-]+}/?{isb}?', function ($avkey, $isb) {
               $stmt->execute();
               //$wine = $stmt->fetchObject();
               $info = $stmt->fetch(PDO::FETCH_ASSOC);
-              $ext = ".flv";
-              if($isdownload)
-                $ext = ".avi";
-              if($info['ismp4']==1)
-                $ext = ".mp4";
-              if($isb&&$row['bkey'])
-                $info['videourl'] = getVideoUrl($info['bkey'].$ext,$info['serverid']);
-              else
-                $info['videourl'] = getVideoUrl($info['avkey'].$ext,$info['serverid']);
+              if($info){
+                $ext = ".flv";
+                if($isdownload)
+                  $ext = ".avi";
+                if($info['ismp4']==1)
+                  $ext = ".mp4";
+                if($isb&&$row['bkey'])
+                  $info['videourl'] = getVideoUrl($info['bkey'].$ext,$info['serverid']);
+                else
+                  $info['videourl'] = getVideoUrl($info['avkey'].$ext,$info['serverid']);
 
-              $info['picurl'] = getPicUrl($info['avkey'],$info['serverid'],'b');
+                $info['picurl'] = getPicUrl($info['avkey'],$info['serverid'],'b');
+                //$info['relatedata'] = unserialize($info['relatedata']);
+              }
               //$wines = $stmt->fetchAll(PDO::FETCH_OBJ);
               $db = null;
               echo '{"info": ' . json_encode($info) . '}';
@@ -59,7 +62,7 @@ $app->get('/api/play/{avkey:[0-9a-z-]+}/?{isb}?', function ($avkey, $isb) {
 
 $app->get('/api/index/{cid:[0-9]+}/{order:[0-9a-z]+}/{nowpage:[0-9]+}', function($cid, $order, $nowpage) {
         $perpage = 10;
-        $p = $p > 1 ? intval($p - 1) * $perpage : 0;
+        $p = $nowpage > 1 ? intval($nowpage - 1) * $perpage : 0;
         $orderkey = in_array('new', 'hot', 'scores') ? $order : 'new';
         $orderArr = array('new' => ' `video`.`createtime` ', 'hot' => ' `video`.`viewcount` ', 'scores' => ' `video`.`scores` ');
         $orderbysql = ' ORDER BY  '.$orderArr[$orderkey].' DESC ';
@@ -87,7 +90,19 @@ $app->get('/api/index/{cid:[0-9]+}/{order:[0-9a-z]+}/{nowpage:[0-9]+}', function
         }
 });
 
-$app->post('/api/wines', function () use ($app) {        
+$app->get('/api/channel', function () {        
+        $sql = 'SELECT  `cid` ,  `name`  FROM  `channel` WHERE cid != 11 AND`state` = 1 ';
+        try {
+                $db = getConnection();
+                $stmt = $db->query($sql);
+                $lists = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                echo json_encode($lists);
+        } catch(PDOException $e) {
+                echo '{"error":{"text":'. $e->getMessage() .'}}';
+        }
+        
+});
+$app->post('/api/channels', function () use ($app) {        
         $wine = json_decode($app->request->getRawBody());
         $sql = "INSERT INTO wine (name, grapes, country, region, year, description) VALUES (:name, :grapes, :country, :region, :year, :description)";
         try {

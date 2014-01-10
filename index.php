@@ -19,7 +19,7 @@ $app->get('/', function () {
         echo 'index.html';
 });
 
-$app->get('/api/play/{avkey:[0-9a-z-]+}/?{isb}?', function ($avkey, $isb) {
+$app->get('/api/play/{avkey:[\d\w-]+}/?{isb}?', function ($avkey, $isb) {
       $moresql = sprintf(' AND status = 1 AND createtime <=\'%s\' ', date('Y-m-d'));
       $avK = str_replace('-','',$avkey);
       if($avK == $avkey){
@@ -60,8 +60,8 @@ $app->get('/api/play/{avkey:[0-9a-z-]+}/?{isb}?', function ($avkey, $isb) {
       }
 });
 
-$app->get('/api/index/{cid:[0-9]+}/{order:[0-9a-z]+}/{nowpage:[0-9]+}', function($cid, $order, $nowpage) {
-        $perpage = 10;
+$app->get('/api/index/{cid:[0-9]+}/{order:[\d\w]+}/{nowpage:[0-9]+}', function($cid, $order, $nowpage) {
+        $perpage = 50;
         $p = $nowpage > 1 ? intval($nowpage - 1) * $perpage : 0;
         $orderkey = in_array('new', 'hot', 'scores') ? $order : 'new';
         $orderArr = array('new' => ' `video`.`createtime` ', 'hot' => ' `video`.`viewcount` ', 'scores' => ' `video`.`scores` ');

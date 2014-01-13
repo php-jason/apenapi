@@ -14,6 +14,7 @@ function getConnection() {
 }
 
 $app = new Phalcon\Mvc\Micro();
+$db = getConnection();
 
 $app->get('/', function () {
         echo 'index.html';
@@ -29,7 +30,7 @@ $app->get('/api/play/{avkey:[\d\w-]+}/?{isb}?', function ($avkey, $isb) {
       }
       $sql = sprintf("SELECT * FROM `video` WHERE %s %s LIMIT 1",$wheresql,$moresql);
       try {
-              $db = getConnection();
+              global $db;
               $stmt = $db->prepare($sql);
               $stmt->bindParam("avkey", $avkey);
               if($avK != $avkey){
@@ -50,7 +51,8 @@ $app->get('/api/play/{avkey:[\d\w-]+}/?{isb}?', function ($avkey, $isb) {
                   $info['videourl'] = getVideoUrl($info['avkey'].$ext,$info['serverid']);
 
                 $info['picurl'] = getPicUrl($info['avkey'],$info['serverid'],'b');
-                //$info['relatedata'] = unserialize($info['relatedata']);
+                $info['relatedata'] = unserialize($info['relatedata']);
+                $info['taglists'] = getTagsByVid($info['vid']);
               }
               //$wines = $stmt->fetchAll(PDO::FETCH_OBJ);
               $db = null;
@@ -77,7 +79,7 @@ $app->get('/api/index/{cid:[0-9]+}/{order:[\d\w]+}/{nowpage:[0-9]+}', function($
         FROM  `video` %s %s LIMIT %d , %d",$wheresql,$orderbysql,$p,$perpage);
         
         try {
-                $db = getConnection();
+                global $db;
                 $stmt = $db->query($sql);  
                 $lists = $stmt->fetchAll(PDO::FETCH_ASSOC);  
                 foreach($lists as &$val){
@@ -93,7 +95,7 @@ $app->get('/api/index/{cid:[0-9]+}/{order:[\d\w]+}/{nowpage:[0-9]+}', function($
 $app->get('/api/channel', function () {        
         $sql = 'SELECT  `cid` ,  `name`  FROM  `channel` WHERE cid != 11 AND`state` = 1 ';
         try {
-                $db = getConnection();
+                global $db;
                 $stmt = $db->query($sql);
                 $lists = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 echo json_encode($lists);
@@ -106,7 +108,6 @@ $app->post('/api/channels', function () use ($app) {
         $wine = json_decode($app->request->getRawBody());
         $sql = "INSERT INTO wine (name, grapes, country, region, year, description) VALUES (:name, :grapes, :country, :region, :year, :description)";
         try {
-                $db = getConnection();
                 $stmt = $db->prepare($sql);  
                 $stmt->bindParam("name", $wine->name);
                 $stmt->bindParam("grapes", $wine->grapes);
@@ -129,9 +130,23 @@ $app->handle();
 
 function getChannelList(){
     $sql = 'SELECT  `cid` ,  `name` ,  `videocount` FROM  `channel` WHERE `state` = 1 ';
-    $db = getConnection();
+    global $db;
     $stmt = $db->query($sql);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+function getTagsByVid($vid){
+  $sql = sprintf("SELECT t.tagid , t.name FROM tag AS t , videotag vt WHERE vt.vid = %d AND vt.tagid = t.tagid ",$vid);
+  global $db;
+  $stmt = $db->query($sql);
+  $list = $stmt->fetchAll(PDO::FETCH_ASSOC);
+  $tmp = array();
+  foreach($list as $v){
+    if($v['name']){
+       $tmp[] = $v['name'];
+    }
+  }
+  return implode(' | ', $tmp);
 }
 
 function getVideoUrl($videoname,$serverid,$isvip=null){
